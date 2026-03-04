@@ -47,3 +47,11 @@ python run_demo.py --device cpu --train-episodes 120 --train-epochs 12 --eval-ep
 - Использовать stronger decoder / latent overshooting.
 - Перейти на MiniGrid и сравнить несколько текстовых целей.
 - Добавить actor-critic (Dreamer-style policy learning в latent space).
+
+
+## Практический note по запуску
+
+Если при старте появляется ошибка про `NumPy 2.x` и модули, собранные под `NumPy 1.x`, нужно использовать `numpy<2` (и совместить версии `torch`/`transformers` (например, `torch 2.2.x` + `transformers<4.46`)). Это добавлено в `requirements.txt` и в раздел troubleshooting в `README.md`.
+
+
+Дополнение по запуску: после загрузки CLIP может казаться, что скрипт завис. На CPU это часто связано с дорогим VLM scoring в planning loop. В обновлённой версии добавлен batched scoring, что заметно ускоряет `wm_vlm`.

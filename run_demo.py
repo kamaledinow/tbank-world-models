@@ -9,7 +9,7 @@ import imageio.v2 as imageio
 import numpy as np
 import torch
 import torch.nn.functional as F
-from tqdm import trange
+from tqdm import trange, tqdm
 
 from src.env import TinyGridGoalEnv
 from src.planner import PlanConfig, one_hot, random_shooting_action

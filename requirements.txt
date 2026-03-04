@@ -1,7 +1,9 @@
-torch>=2.0
-numpy>=1.23
+torch>=2.2,<2.4
+numpy>=1.23,<2
 matplotlib>=3.7
 imageio>=2.34
 tqdm>=4.66
-transformers>=4.40
+transformers>=4.40,<4.46
 Pillow>=10.0
+packaging>=23.0
+

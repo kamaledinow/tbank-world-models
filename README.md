@@ -36,3 +36,66 @@ python run_demo.py --device cpu --train-episodes 120 --train-epochs 12 --eval-ep
 ## Краткий отчёт
 
 См. `REPORT.md` (содержит количественные результаты, обсуждение failure modes и future work).
+
+
+## Troubleshooting
+
+### Ошибка `A module that was compiled using NumPy 1.x cannot be run in NumPy 2.x`
+
+Это конфликт бинарной совместимости между установленными версиями `numpy` и `torch`.
+
+Быстрое решение (рекомендуется в новом venv):
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip uninstall -y numpy torch torchvision torchaudio
+pip install "numpy<2"
+pip install "torch>=2.2,<2.4"
+pip install "transformers>=4.40,<4.46"
+pip install -r requirements.txt
+```
+
+Проверка, что всё в порядке:
+
+```bash
+python -c "import numpy, torch; print('numpy', numpy.__version__); print('torch', torch.__version__); import numpy as np; import torch as t; t.from_numpy(np.zeros(1, dtype=np.float32)); print('OK')"
+```
+
+Если у вас уже установлен `torch==2.2.2`, лучше обновить его до `2.4+` **или** оставить 2.2.2 и строго зафиксировать `numpy<2`.
+
+
+### Ошибка `Disabling PyTorch because PyTorch >= 2.4 is required but found 2.2.2`
+
+Это означает, что установлен слишком новый `transformers`, который отключает backend PyTorch<2.4.
+
+Исправление (для `torch==2.2.x`):
+
+```bash
+pip uninstall -y transformers
+pip install "transformers>=4.40,<4.46"
+```
+
+Либо альтернативно обновить torch до `>=2.4` и оставить более новую версию `transformers`.
+
+
+### Скрипт "висит" после скачивания `pytorch_model.bin`
+
+Обычно это не зависание, а очень медленный CPU-инференс CLIP во время `wm_vlm` планирования.
+
+Почему долго:
+- на каждом шаге planner оценивает много candidate-траекторий;
+- для каждой траектории раньше считался CLIP-скор отдельно, что на CPU может занимать десятки минут/часы.
+
+Что делать:
+1. Обновиться до последней версии этого репозитория (там добавлен batched VLM scoring).
+2. Запустить с более лёгкими параметрами:
+
+```bash
+python run_demo.py --device cpu --train-episodes 60 --train-epochs 6 --eval-episodes 4 --horizon 6 --num-candidates 6
+```
+
+3. Для полноценного прогона лучше использовать GPU (`--device cuda`, если доступно).
+
+Если нужно быстро проверить только обучение world model без VLM-части, временно отключите policy `wm_vlm` в цикле evaluation в `run_demo.py`.
