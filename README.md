@@ -119,3 +119,25 @@ python run_demo.py -h
 1. Обновите репозиторий (`git pull`) или заново скачайте архив с последними изменениями.
 2. Запускайте из корня проекта, где лежит актуальный `run_demo.py`.
 3. Дополнительно поддерживаются алиасы: `--planning-horizon` и `--num_candidates`.
+<<<<<<< codex/create-demo-project-for-world-model-and-vlm-20y1fn
+
+
+### Ошибка `AttributeError: 'BaseModelOutputWithPooling' object has no attribute 'norm'`
+
+Это бывает из-за различий в API/обёртках `transformers` в разных окружениях: вместо тензора иногда возвращается объект model output.
+
+В актуальной версии репозитория `CLIPScorer` уже обрабатывает оба варианта (тензор и model output).
+
+Что сделать:
+1. Обновить репозиторий до последнего коммита.
+2. Переустановить зависимости в venv:
+
+```bash
+pip install --upgrade --force-reinstall -r requirements.txt
+```
+
+3. Перезапустить запуск.
+
+Сообщение про `HF_TOKEN` — это предупреждение про лимиты Hub, не фатальная ошибка.
+=======
+>>>>>>> main
