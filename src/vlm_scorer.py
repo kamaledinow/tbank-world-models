@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+<<<<<<< codex/create-demo-project-for-world-model-and-vlm-20y1fn
 from typing import Any, Sequence
+=======
+from typing import Sequence
+>>>>>>> main
 import numpy as np
 import torch
 from PIL import Image
@@ -16,6 +20,7 @@ class CLIPScorer:
         self.model.eval()
         self.text_emb = self._encode_text(text_goal)
 
+<<<<<<< codex/create-demo-project-for-world-model-and-vlm-20y1fn
     def _to_embedding_tensor(self, output: Any) -> torch.Tensor:
         """Convert various transformers outputs into a [B, D] embedding tensor.
 
@@ -48,6 +53,14 @@ class CLIPScorer:
         raw = self.model.get_text_features(**toks)
         emb = self._to_embedding_tensor(raw)
         return self._normalize(emb)
+=======
+    @torch.no_grad()
+    def _encode_text(self, text: str) -> torch.Tensor:
+        toks = self.processor(text=[text], return_tensors="pt", padding=True).to(self.device)
+        emb = self.model.get_text_features(**toks)
+        emb = emb / emb.norm(dim=-1, keepdim=True)
+        return emb
+>>>>>>> main
 
     @torch.no_grad()
     def score_frames(self, frames: Sequence[np.ndarray]) -> float:
@@ -76,8 +89,13 @@ class CLIPScorer:
         for i in range(0, len(flat_images), image_batch_size):
             chunk = flat_images[i : i + image_batch_size]
             inputs = self.processor(images=chunk, return_tensors="pt").to(self.device)
+<<<<<<< codex/create-demo-project-for-world-model-and-vlm-20y1fn
             raw = self.model.get_image_features(**inputs)
             img_emb = self._normalize(self._to_embedding_tensor(raw))
+=======
+            img_emb = self.model.get_image_features(**inputs)
+            img_emb = img_emb / img_emb.norm(dim=-1, keepdim=True)
+>>>>>>> main
             sims = (img_emb @ self.text_emb.T).squeeze(-1)
             sims_all.append(sims.detach().cpu())
 

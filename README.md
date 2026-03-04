@@ -119,6 +119,7 @@ python run_demo.py -h
 1. Обновите репозиторий (`git pull`) или заново скачайте архив с последними изменениями.
 2. Запускайте из корня проекта, где лежит актуальный `run_demo.py`.
 3. Дополнительно поддерживаются алиасы: `--planning-horizon` и `--num_candidates`.
+<<<<<<< codex/create-demo-project-for-world-model-and-vlm-20y1fn
 
 
 ### Ошибка `AttributeError: 'BaseModelOutputWithPooling' object has no attribute 'norm'`
@@ -138,3 +139,5 @@ pip install --upgrade --force-reinstall -r requirements.txt
 3. Перезапустить запуск.
 
 Сообщение про `HF_TOKEN` — это предупреждение про лимиты Hub, не фатальная ошибка.
+=======
+>>>>>>> main
