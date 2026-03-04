@@ -1,0 +1,7 @@
+torch>=2.0
+numpy>=1.23
+matplotlib>=3.7
+imageio>=2.34
+tqdm>=4.66
+transformers>=4.40
+Pillow>=10.0
