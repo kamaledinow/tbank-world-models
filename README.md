@@ -99,3 +99,23 @@ python run_demo.py --device cpu --train-episodes 60 --train-epochs 6 --eval-epis
 3. Для полноценного прогона лучше использовать GPU (`--device cuda`, если доступно).
 
 Если нужно быстро проверить только обучение world model без VLM-части, временно отключите policy `wm_vlm` в цикле evaluation в `run_demo.py`.
+
+
+### Ошибка `run_demo.py: error: unrecognized arguments: --horizon ... --num-candidates ...`
+
+Скорее всего запускается **не та версия** `run_demo.py` (старый файл/папка) или не тот интерпретатор.
+
+Проверьте:
+
+```bash
+pwd
+python -c "import sys; print(sys.executable)"
+python run_demo.py -h
+```
+
+В `-h` должны быть аргументы `--horizon` и `--num-candidates`.
+
+Если их нет:
+1. Обновите репозиторий (`git pull`) или заново скачайте архив с последними изменениями.
+2. Запускайте из корня проекта, где лежит актуальный `run_demo.py`.
+3. Дополнительно поддерживаются алиасы: `--planning-horizon` и `--num_candidates`.

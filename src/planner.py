@@ -29,28 +29,30 @@ def evaluate_action_sequences(
     config: PlanConfig = PlanConfig(),
 ):
     device = start_state.deter.device
-    K, H = action_seqs.shape
-    # tile start state
+    k_cand, horizon = action_seqs.shape
     state = RSSMState(
-        deter=start_state.deter.repeat(K, 1),
-        stoch=start_state.stoch.repeat(K, 1),
+        deter=start_state.deter.repeat(k_cand, 1),
+        stoch=start_state.stoch.repeat(k_cand, 1),
     )
-    total = torch.zeros(K, device=device)
-    imagined_frames = [[] for _ in range(K)]
+    total = torch.zeros(k_cand, device=device)
+    imagined_frames = [[] for _ in range(k_cand)]
 
-    for t in range(H):
+    for t in range(horizon):
         a_oh = one_hot(action_seqs[:, t], model.action_dim).to(device)
         state = model.imagine_step(state, a_oh)
         obs_pred, rew_pred, _ = model.decode(state)
         total += (config.gamma**t) * rew_pred
+
         if use_vlm:
             frames = (obs_pred.clamp(0, 1).detach().cpu().numpy() * 255).astype(np.uint8)
             frames = np.transpose(frames, (0, 2, 3, 1))
-            for k in range(K):
-                imagined_frames[k].append(frames[k])
+            for i in range(k_cand):
+                imagined_frames[i].append(frames[i])
 
     if use_vlm and vlm_scorer is not None:
-        vlm_scores = torch.tensor([vlm_scorer.score_frames(frames) for frames in imagined_frames], device=device)
+        # Batch scoring all trajectories at once is dramatically faster than per-candidate calls.
+        vlm_scores_np = vlm_scorer.score_trajectories(imagined_frames, image_batch_size=64)
+        vlm_scores = torch.from_numpy(vlm_scores_np).to(device=device, dtype=total.dtype)
         total = total + config.vlm_weight * vlm_scores
 
     return total
