@@ -23,38 +23,6 @@ def set_seed(seed: int):
     torch.manual_seed(seed)
 
 
-
-
-def check_runtime_compat(device: torch.device) -> None:
-    """Fail fast with actionable messages for common torch/numpy/transformers mismatches."""
-    # 1) torch <-> numpy ABI
-    try:
-        _ = torch.from_numpy(np.zeros((1,), dtype=np.float32)).to(device)
-    except Exception as exc:
-        raise RuntimeError(
-            "Torch/NumPy are incompatible. Usually NumPy>=2 is installed with a Torch build "
-            "compiled against NumPy 1.x. Reinstall with `numpy<2`. "
-            f"Original error: {exc}"
-        ) from exc
-
-    # 2) transformers backend gate (some versions require newer torch)
-    try:
-        import transformers
-        from packaging import version
-
-        tver = version.parse(torch.__version__.split('+')[0])
-        trver = version.parse(transformers.__version__)
-        # In newer transformers releases, some model classes require torch>=2.4.
-        if trver >= version.parse('4.46.0') and tver < version.parse('2.4.0'):
-            raise RuntimeError(
-                "Installed transformers is too new for current torch. "
-                f"Detected torch={torch.__version__}, transformers={transformers.__version__}. "
-                "Use either: (A) torch>=2.4, or (B) transformers<4.46."
-            )
-    except ModuleNotFoundError:
-        pass
-
-
 def preprocess(obs: np.ndarray, device: torch.device) -> torch.Tensor:
     x = torch.from_numpy(obs).float().to(device) / 255.0
     return x.permute(2, 0, 1)
@@ -153,13 +121,10 @@ def main():
     p.add_argument("--train-epochs", type=int, default=12)
     p.add_argument("--eval-episodes", type=int, default=12)
     p.add_argument("--goal-text", type=str, default="agent at the green goal")
-    p.add_argument("--horizon", type=int, default=8)
-    p.add_argument("--num-candidates", type=int, default=8)
     args = p.parse_args()
 
     set_seed(args.seed)
     device = torch.device(args.device)
-    check_runtime_compat(device)
 
     env = TinyGridGoalEnv(size=6, max_steps=35, tile_size=8, seed=args.seed)
     model = RSSM(action_dim=env.action_space_n).to(device)
@@ -168,7 +133,7 @@ def main():
     train_world_model(model, dataset, device=device, epochs=args.train_epochs)
 
     scorer = CLIPScorer(text_goal=args.goal_text, device=args.device)
-    plan_cfg = PlanConfig(horizon=args.horizon, num_candidates=args.num_candidates, vlm_weight=2.0)
+    plan_cfg = PlanConfig(horizon=10, num_candidates=24, vlm_weight=2.0)
 
     metrics = {}
     out_dir = Path("outputs")
@@ -176,8 +141,7 @@ def main():
 
     for policy in ["random", "wm_no_vlm", "wm_vlm"]:
         returns, succs = [], []
-        print(f"\n[eval] policy={policy}, episodes={args.eval_episodes}, horizon={plan_cfg.horizon}, candidates={plan_cfg.num_candidates}")
-        for ep in tqdm(range(args.eval_episodes), desc=f"eval:{policy}", leave=False):
+        for ep in range(args.eval_episodes):
             gif_path = out_dir / f"{policy}_ep{ep}.gif" if ep == 0 else None
             ret, succ = run_policy(
                 env=env,

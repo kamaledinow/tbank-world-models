@@ -25,41 +25,10 @@ class CLIPScorer:
 
     @torch.no_grad()
     def score_frames(self, frames: Sequence[np.ndarray]) -> float:
-        """Score a single trajectory (list of frames)."""
-        batch_scores = self.score_trajectories([frames])
-        return float(batch_scores[0])
-
-    @torch.no_grad()
-    def score_trajectories(self, trajectories: Sequence[Sequence[np.ndarray]], image_batch_size: int = 64) -> np.ndarray:
-        """Score many imagined trajectories efficiently.
-
-        Returns one scalar per trajectory: max_t(sim(frame_t, text_goal)).
-        """
-        num_traj = len(trajectories)
-        if num_traj == 0:
-            return np.zeros((0,), dtype=np.float32)
-
-        lengths = [len(tr) for tr in trajectories]
-        total_frames = sum(lengths)
-        if total_frames == 0:
-            return np.zeros((num_traj,), dtype=np.float32)
-
-        flat_images = [Image.fromarray(frame) for tr in trajectories for frame in tr]
-        sims_all = []
-
-        for i in range(0, len(flat_images), image_batch_size):
-            chunk = flat_images[i : i + image_batch_size]
-            inputs = self.processor(images=chunk, return_tensors="pt").to(self.device)
-            img_emb = self.model.get_image_features(**inputs)
-            img_emb = img_emb / img_emb.norm(dim=-1, keepdim=True)
-            sims = (img_emb @ self.text_emb.T).squeeze(-1)
-            sims_all.append(sims.detach().cpu())
-
-        sims_flat = torch.cat(sims_all, dim=0).numpy()
-
-        out = np.zeros((num_traj,), dtype=np.float32)
-        idx = 0
-        for k, ln in enumerate(lengths):
-            out[k] = float(np.max(sims_flat[idx : idx + ln])) if ln > 0 else 0.0
-            idx += ln
-        return out
+        pil_images = [Image.fromarray(frame) for frame in frames]
+        inputs = self.processor(images=pil_images, return_tensors="pt").to(self.device)
+        img_emb = self.model.get_image_features(**inputs)
+        img_emb = img_emb / img_emb.norm(dim=-1, keepdim=True)
+        sims = (img_emb @ self.text_emb.T).squeeze(-1)
+        # encourage at least one good future state
+        return float(torch.max(sims).cpu().item())
