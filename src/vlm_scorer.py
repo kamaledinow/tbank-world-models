@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Sequence
+from typing import Any, Sequence
 import numpy as np
 import torch
 from PIL import Image
@@ -16,12 +16,38 @@ class CLIPScorer:
         self.model.eval()
         self.text_emb = self._encode_text(text_goal)
 
+    def _to_embedding_tensor(self, output: Any) -> torch.Tensor:
+        """Convert various transformers outputs into a [B, D] embedding tensor.
+
+        Some environments/forks may return model outputs (e.g. BaseModelOutputWithPooling)
+        where vanilla transformers would return features tensor.
+        """
+        if isinstance(output, torch.Tensor):
+            return output
+
+        # Common CLIP named outputs
+        if hasattr(output, "text_embeds") and output.text_embeds is not None:
+            return output.text_embeds
+        if hasattr(output, "image_embeds") and output.image_embeds is not None:
+            return output.image_embeds
+        if hasattr(output, "pooler_output") and output.pooler_output is not None:
+            return output.pooler_output
+        if hasattr(output, "last_hidden_state") and output.last_hidden_state is not None:
+            # fallback: mean-pool sequence tokens
+            return output.last_hidden_state.mean(dim=1)
+
+        raise TypeError(f"Unsupported CLIP output type: {type(output)}")
+
+    def _normalize(self, emb: torch.Tensor) -> torch.Tensor:
+        denom = emb.norm(dim=-1, keepdim=True).clamp_min(1e-8)
+        return emb / denom
+
     @torch.no_grad()
     def _encode_text(self, text: str) -> torch.Tensor:
         toks = self.processor(text=[text], return_tensors="pt", padding=True).to(self.device)
-        emb = self.model.get_text_features(**toks)
-        emb = emb / emb.norm(dim=-1, keepdim=True)
-        return emb
+        raw = self.model.get_text_features(**toks)
+        emb = self._to_embedding_tensor(raw)
+        return self._normalize(emb)
 
     @torch.no_grad()
     def score_frames(self, frames: Sequence[np.ndarray]) -> float:
@@ -50,8 +76,8 @@ class CLIPScorer:
         for i in range(0, len(flat_images), image_batch_size):
             chunk = flat_images[i : i + image_batch_size]
             inputs = self.processor(images=chunk, return_tensors="pt").to(self.device)
-            img_emb = self.model.get_image_features(**inputs)
-            img_emb = img_emb / img_emb.norm(dim=-1, keepdim=True)
+            raw = self.model.get_image_features(**inputs)
+            img_emb = self._normalize(self._to_embedding_tensor(raw))
             sims = (img_emb @ self.text_emb.T).squeeze(-1)
             sims_all.append(sims.detach().cpu())
 

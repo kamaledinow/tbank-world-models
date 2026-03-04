@@ -119,3 +119,31 @@ python run_demo.py -h
 1. Обновите репозиторий (`git pull`) или заново скачайте архив с последними изменениями.
 2. Запускайте из корня проекта, где лежит актуальный `run_demo.py`.
 3. Дополнительно поддерживаются алиасы: `--planning-horizon` и `--num_candidates`.
+
+
+### Ошибка `AttributeError: 'BaseModelOutputWithPooling' object has no attribute 'norm'`
+
+Это бывает из-за различий в API/обёртках `transformers` в разных окружениях: вместо тензора иногда возвращается объект model output.
+
+В актуальной версии репозитория `CLIPScorer` уже обрабатывает оба варианта (тензор и model output).
+
+Что сделать:
+1. Обновить репозиторий до последнего коммита.
+2. Переустановить зависимости в venv:
+
+```bash
+pip install --upgrade --force-reinstall -r requirements.txt
+```
+
+3. Перезапустить запуск.
+
+Сообщение про `HF_TOKEN` — это предупреждение про лимиты Hub, не фатальная ошибка.
+
+
+## Update (latest fixes)
+
+- Added robust CLIP output handling in `CLIPScorer` for environments where transformers returns model-output objects instead of plain tensors.
+- Added planning CLI aliases so both styles are accepted:
+  - `--horizon` / `--planning-horizon`
+  - `--num-candidates` / `--num_candidates`
+- Improved troubleshooting section for common local-run issues on macOS/CPU setups.
